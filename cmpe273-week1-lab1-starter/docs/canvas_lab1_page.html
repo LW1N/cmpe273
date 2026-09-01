@@ -1,0 +1,73 @@
+<h2>CMPE 273 – Week 1 Lab 1: Your First Distributed System</h2>
+
+<p><strong>Goal:</strong> Build a tiny distributed system locally with <strong>two services</strong> that communicate over the network, include <strong>basic logging</strong>, and demonstrate <strong>independent failure</strong>.</p>
+
+<h3>What You Will Build</h3>
+<ul>
+  <li><strong>Service A (Echo API)</strong> on <code>localhost:8080</code>
+    <ul>
+      <li><code>GET /health</code> → <code>{"status":"ok"}</code></li>
+      <li><code>GET /echo?msg=hello</code> → <code>{"echo":"hello"}</code></li>
+    </ul>
+  </li>
+  <li><strong>Service B (Client)</strong> on <code>localhost:8081</code>
+    <ul>
+      <li><code>GET /health</code> → <code>{"status":"ok"}</code></li>
+      <li><code>GET /call-echo?msg=hello</code> → calls Service A <code>/echo</code> and returns a combined response</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>Requirements</h3>
+<ul>
+  <li>Two independent processes (run in separate terminals)</li>
+  <li>HTTP (or gRPC for stretch)</li>
+  <li>Basic request logging: service name, endpoint, status, latency</li>
+  <li>Service B must use a timeout when calling Service A</li>
+  <li>Demonstrate failure: stop Service A; Service B returns <code>503</code> and logs an error</li>
+</ul>
+
+<h3>Install / Setup</h3>
+<ul>
+  <li>Git</li>
+  <li>One runtime: Python 3.10+ or Go 1.21+ (or Java 17+ if your team prefers)</li>
+  <li><em>Docker Desktop</em> (recommended for future labs)</li>
+</ul>
+
+<h3>Starter Repo</h3>
+<p>Use the provided starter and pick one track:</p>
+<ul>
+  <li><strong>python-http/</strong> (Flask + requests)</li>
+  <li><strong>go-http/</strong> (net/http)</li>
+</ul>
+
+<h3>How to Test</h3>
+<p><strong>Success:</strong></p>
+<pre><code>curl "http://127.0.0.1:8081/call-echo?msg=hello"</code></pre>
+
+<p><strong>Failure:</strong> Stop Service A (Ctrl+C), then rerun the same curl command. Expect HTTP <code>503</code> and a clear error log.</p>
+
+<h3>Deliverables (Submit to Canvas)</h3>
+<ol>
+  <li>GitHub repository link</li>
+  <li>README updates:
+    <ul>
+      <li>How to run locally</li>
+      <li>Success + failure proof (screenshot or pasted output)</li>
+      <li>1 short paragraph: “What makes this distributed?”</li>
+    </ul>
+  </li>
+</ol>
+
+<h3>Using Coding Agents (Encouraged)</h3>
+<p>You may use coding agents to scaffold services, generate tests, and explore APIs. You must still understand what you run and be able to explain:</p>
+<ul>
+  <li>What happens on timeout?</li>
+  <li>What happens if Service A is down?</li>
+  <li>What do your logs show and how would you debug?</li>
+</ul>
+
+<h3>Reading (Optional, ~10 minutes)</h3>
+<ul>
+  <li>The Eight Fallacies of Distributed Computing: https://en.wikipedia.org/wiki/Fallacies_of_distributed_computing</li>
+</ul>
