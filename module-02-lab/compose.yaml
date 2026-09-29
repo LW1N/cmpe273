@@ -1,0 +1,13 @@
+services:
+  service-a:
+    build: ./service-a
+    ports:
+      - '8080:5000'
+    environment:
+      SERVICE_B_URL: http://service-b:5001
+    depends_on:
+      - service-b
+  service-b:
+    build: ./service-b
+    ports:
+      - '5001:5001'
