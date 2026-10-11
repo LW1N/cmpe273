@@ -107,6 +107,62 @@ class IndependentProcessTests(unittest.TestCase):
         self.assertEqual(submit({"item_id": "sku-123"}).status_code, 201)
         print("Inventory restarted: next order returns HTTP 201", flush=True)
 
+    def test_notification_queue_recovery_and_duplicate_delivery(self):
+        _, inventory_url = self.start_service("inventory.py", free_port())
+        notification_port = free_port()
+        notification_url = f"http://127.0.0.1:{notification_port}"
+        order_process, order_url = self.start_service(
+            "order.py", free_port(), INVENTORY_URL=inventory_url,
+            NOTIFICATION_URL=notification_url,
+        )
+
+        def submit():
+            response = requests.post(
+                f"{order_url}/v1/orders",
+                json={"item_id": "sku-123", "quantity": 2, "recipient": "alice"},
+                timeout=3,
+            )
+            self.assertEqual(response.status_code, 201)
+            return response.json()
+
+        def wait_for_delivery(created):
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                response = requests.get(
+                    f"{notification_url}/v1/notifications/{created['order_id']}", timeout=1
+                )
+                if response.status_code == 200:
+                    delivery = response.json()
+                    self.assertEqual(delivery["recipient"], "alice")
+                    self.assertEqual(delivery["status"], "logged")
+                    return delivery
+                self.assertEqual(response.status_code, 404)
+                time.sleep(0.05)
+            self.fail("Queued notification was not delivered")
+
+        created = submit()  # Notification has not started; creation must still succeed.
+        notification_process, _ = self.start_service("notification.py", notification_port)
+        delivery = wait_for_delivery(created)
+        event = {
+            "event_id": created["order_id"], "event_type": "OrderCreated",
+            "order_id": created["order_id"], "recipient": "alice",
+            "item_id": created["item_id"], "quantity": created["quantity"],
+            "created_at": created["created_at"],
+        }
+        response = requests.post(f"{notification_url}/v1/events", json=event, timeout=3)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), delivery)  # No second delivery timestamp.
+        self.assertEqual(requests.post(
+            f"{notification_url}/v1/events", json={"event_type": "Unknown"}, timeout=3
+        ).status_code, 400)
+
+        self.stop_service(notification_process)
+        queued = submit()
+        self.assertIsNone(order_process.poll())
+        self.start_service("notification.py", notification_port)
+        wait_for_delivery(queued)
+        print("\nNotification stopped: order HTTP 201; restart: queued confirmation logged; duplicate: HTTP 200", flush=True)
+
 
 class DependencyContractTests(unittest.TestCase):
     def test_timeout_does_not_create_order(self):

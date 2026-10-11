@@ -2,7 +2,9 @@
 
 import logging
 import os
+import queue
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from urllib.parse import quote
@@ -13,8 +15,30 @@ from flask import Flask, jsonify, request
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 INVENTORY_URL = os.environ.get("INVENTORY_URL", "http://127.0.0.1:5001").rstrip("/")
+NOTIFICATION_URL = os.environ.get("NOTIFICATION_URL", "http://127.0.0.1:5002").rstrip("/")
 ORDERS = {}
 ORDERS_LOCK = threading.Lock()
+EVENTS = queue.SimpleQueue()
+
+
+def deliver_events():
+    """Keep each event pending until Notification acknowledges it."""
+    while True:
+        event = EVENTS.get()
+        while True:
+            try:
+                with requests.post(
+                    f"{NOTIFICATION_URL}/v1/events",
+                    json=event,
+                    timeout=(0.2, 0.6),
+                    allow_redirects=False,
+                ) as response:
+                    if response.status_code in (200, 201):
+                        break
+            except requests.RequestException:
+                pass
+            app.logger.warning("event_id=%s notification_pending", event["event_id"])
+            time.sleep(1)
 
 
 def result(body, status, request_id):
@@ -37,6 +61,7 @@ def create_order():
         return result({"error": "invalid_order", "message": "A JSON object is required."}, 400, request_id)
     item_id = data.get("item_id")
     quantity = data.get("quantity", 1)
+    recipient = data.get("recipient", "demo-user")
     if (
         not isinstance(item_id, str)
         or not item_id.strip()
@@ -46,6 +71,8 @@ def create_order():
         or quantity < 1
     ):
         return result({"error": "invalid_order", "message": "Provide an item_id and a positive integer quantity."}, 400, request_id)
+    if not isinstance(recipient, str) or not recipient.strip() or len(recipient) > 254:
+        return result({"error": "invalid_order", "message": "recipient must be a nonempty string of at most 254 characters."}, 400, request_id)
 
     try:
         with requests.get(
@@ -87,10 +114,19 @@ def create_order():
         "quantity": quantity,
         "status": "created",
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "recipient": recipient,
     }
     with ORDERS_LOCK:
         ORDERS[order["order_id"]] = order
-    # Represents the event production point; no notification transport is implemented.
+        EVENTS.put({
+            "event_id": order["order_id"],
+            "event_type": "OrderCreated",
+            "order_id": order["order_id"],
+            "recipient": recipient,
+            "item_id": item_id,
+            "quantity": quantity,
+            "created_at": order["created_at"],
+        })
     app.logger.info("event=OrderCreated order_id=%s request_id=%s", order["order_id"], request_id)
     response = result(order, 201, request_id)
     response.headers["Location"] = f"/v1/orders/{order['order_id']}"
@@ -107,4 +143,5 @@ def get_order(order_id):
 
 
 if __name__ == "__main__":
+    threading.Thread(target=deliver_events, daemon=True).start()
     app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "5000")), threaded=True)

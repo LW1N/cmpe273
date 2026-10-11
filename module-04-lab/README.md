@@ -1,8 +1,9 @@
 # Module 04: Online store services
 
 `inventory.py` is extended with sample stock and
-quantity-aware availability. `order.py` adds order creation and tracking using
-the original Flask/Requests approach and dependency error handling.
+quantity-aware availability. 
+`order.py` adds order creation and tracking using the original Flask/Requests approach and dependency error handling.
+`notification.py` consumes order events and logs confirmations in its own process.
 
 ## Architecture
 
@@ -14,27 +15,21 @@ flowchart LR
     Inventory -->|HTTP response: available or unavailable| Order
     Order --- Orders[(Order records)]
     Inventory --- Stock[(Inventory quantities)]
-    Order -.->|Proposed event: OrderCreated| Notification[Notification Service]
-    Notification -.-> Delivery[(Delivery records)]
+    Order --- Queue[(Pending events)]
+    Order -->|Event: OrderCreated via background HTTP POST| Notification[Notification Service :5002]
+    Notification -->|Acknowledgment: HTTP 201 or 200| Order
+    Notification --- Delivery[(Delivery records)]
 ```
 
-The dashed Notification component is a design
-proposal: no notification process, broker, or delivery is implemented. Order logs
-`event=OrderCreated` after saving an order to mark where event publication would
-occur; the log is not a delivered or durable event.
+After saving an order, Order queues an `OrderCreated` event. A background worker posts queued events to Notification's `POST /v1/events` endpoint. Notification logs a confirmation and acknowledges it; Order retries every second until it receives HTTP 201 (new delivery) or HTTP 200 (duplicate already handled). Order creation does not wait for Notification. This small lab uses an in-memory queue and HTTP rather than adding a message broker or email provider.
 
 | Component | Responsibility | Owned data |
 | --- | --- | --- |
-| Order | Validate requests, check Inventory, create orders, and expose order lookup | Order ID, item ID, requested quantity, order status, creation timestamp |
+| Order | Validate requests, check Inventory, create orders, expose order lookup, and publish creation events | Order ID, item ID, requested quantity, recipient, order status, creation timestamp, and pending events |
 | Inventory | Answer availability queries for the requested quantity | SKU identifiers and stock quantities |
-| Notification (proposed) | Consume `OrderCreated` and notify the user | Notification templates, delivery attempts, and delivery status; recipient details would be supplied by a future event contract |
+| Notification | Consume `OrderCreated`, log confirmations, and suppress duplicate events | Delivery records: event ID, order ID, recipient, message, status, and delivery timestamp |
 
-These boundaries separate order workflow, stock management, and message delivery.
-Order references SKUs but does not own or directly read Inventory's stock map.
-Inventory knows nothing about order records. A future Notification consumer could
-retry delivery independently without blocking order creation. Each implemented
-service has its own process and in-memory data; communication crosses an HTTP
-boundary, not a shared Python import or shared dictionary.
+The boundaries separate order workflow, stock management, and message delivery. Order references SKUs, but does not own or directly read Inventory's stock map. Inventory knows nothing about order records. Notification processes events independently without blocking order creation. Each implemented service has its own process and in-memory data; communication crosses an HTTP boundary, not a shared Python import or shared dictionary.
 
 ## Command, Query, and Event
 
@@ -42,7 +37,7 @@ boundary, not a shared Python import or shared dictionary.
 | --- | --- | --- |
 | Check whether an item is available | Query | Requests current stock information without changing Inventory data. Order calls `GET /v1/items/<item_id>?quantity=N`. |
 | Create an order | Command | Requests a state change. `POST /v1/orders` creates an Order-owned record only after a successful availability check. |
-| Order was created | Event | Reports a fact that has already happened. A proposed `OrderCreated` event would carry the order ID, item ID, quantity, and timestamp for Notification to consume. |
+| Order was created | Event | Reports a fact that has already happened. `OrderCreated` carries the event ID, order ID, recipient, item ID, quantity, and creation timestamp for Notification to consume. |
 
 An Inventory HTTP response answers the query; it is not the `OrderCreated` event.
 
@@ -67,97 +62,44 @@ Run each service in a separate terminal, from this directory:
 .venv/bin/python REST/order.py
 ```
 
-Inventory defaults to `127.0.0.1:5001`; Order defaults to `127.0.0.1:5000`.
-Each supports the `PORT` environment variable. Order's `INVENTORY_URL` defaults
-to `http://127.0.0.1:5001`. For example, if those ports are occupied:
+```sh
+# Terminal 3
+.venv/bin/python REST/notification.py
+```
+
+Order defaults to `127.0.0.1:5000`, Inventory to `127.0.0.1:5001`, and Notification
+to `127.0.0.1:5002`. Each supports `PORT`. Order supports `INVENTORY_URL` and
+`NOTIFICATION_URL`, defaulting to the addresses above. For alternate ports:
 
 ```sh
 # Terminal 1
 PORT=5101 .venv/bin/python REST/inventory.py
 # Terminal 2
-PORT=5100 INVENTORY_URL=http://127.0.0.1:5101 .venv/bin/python REST/order.py
+PORT=5100 INVENTORY_URL=http://127.0.0.1:5101 NOTIFICATION_URL=http://127.0.0.1:5102 .venv/bin/python REST/order.py
+# Terminal 3
+PORT=5102 .venv/bin/python REST/notification.py
 ```
 
-The retained `checkout.py` is the previous lab's optional availability proxy.
-It also defaults to port 5000, so run it separately from Order if reviewing the
-original workflow. Inventory retains its integer `available` field for that
-client and adds the boolean `is_available` for the new Order client.
-
-## Submit and track orders
+## Sample run
 
 Sample stock: `sku-123` has 7 units, `sku-456` has 0, and `sku-789` has 3.
 
 ```sh
 curl -i http://127.0.0.1:5000/v1/orders \
   -H 'Content-Type: application/json' \
-  -d '{"item_id":"sku-123","quantity":2}'
+  -d '{"item_id":"sku-123","quantity":2,"recipient":"alice"}'
 ```
 
 Returns **201 Created** with `order_id`, `item_id`, `quantity`, `status: created`,
-`created_at`, and `request_id`. The `Location` header supplies the lookup path:
+`created_at`, `recipient`, and `request_id`. The `Location` header supplies the lookup path:
 
-```sh
-curl http://127.0.0.1:5000/v1/orders/REPLACE_WITH_ORDER_ID
-```
-
-An out-of-stock item or a quantity larger than current stock returns **409**
-with `error: item_unavailable`. An unknown SKU returns **404** with
-`error: item_not_found`. Invalid order JSON, a missing item ID, or a quantity
-that is not a positive integer returns **400**. Quantity defaults to 1.
-Failed submissions do not create orders.
+![Healthy HTTP curl requests](screenshots/cmpe-273-m4-good-sample.png)
 
 ## Failure test
 
-1. Start both services and submit the successful order above.
-2. Stop Inventory with **Ctrl+C** in terminal 1. Leave Order running.
-3. Submit another order with the same curl command.
-4. Check Order's health and the previously created order.
+![Inventory Down](screenshots/cmpe-273-m4-inventory-down.png)
 
-```sh
-curl -i http://127.0.0.1:5000/health
-curl -i http://127.0.0.1:5000/v1/orders/REPLACE_WITH_ORDER_ID
-```
+Order bounds the Inventory call with a 0.2-second connection timeout and a 0.6-second read timeout. Connection failure returns **503 Service Unavailable**; This failure is handled inside the request, so Order remains running and its existing records remain readable. 
 
-Order bounds the Inventory call with a 0.2-second connection timeout and a
-0.6-second read timeout. Connection failure returns **503 Service Unavailable**;
-a timeout returns **504 Gateway Timeout**; malformed data or an unexpected
-dependency status returns **502 Bad Gateway**. These failures are handled inside
-the request, so Order remains running and its existing records remain readable.
-The request ID is sent to Inventory and returned in the Order response/header.
-
-### Automated verification
-
-```sh
-.venv/bin/python -m unittest discover -s REST -v
-```
-
-The integration test starts Order and Inventory as distinct subprocesses on
-temporary ports, creates and retrieves an order, checks unavailable/unknown
-items and invalid requests, then **terminates the real Inventory process** and
-submits another order. It checks Order is still alive and can serve health and
-existing orders, then restarts Inventory and verifies a new order succeeds.
-Separate contract tests check timeout and invalid dependency responses.
-
-Observed test result:
-
-```text
-Available item: HTTP 201; tracking: HTTP 200
-Unavailable item: HTTP 409; unknown item: HTTP 404; invalid orders: HTTP 400
-Inventory stopped: HTTP 503 {"error":"dependency_unavailable","request_id":"8f0ddfc3-b8c6-4844-9715-e854afddd475"}
-Order remains running: HTTP 200 {"service":"order","status":"ok"}
-Inventory restarted: next order returns HTTP 201
-Ran 3 tests — OK
-```
-
-The recorded request ID changes on each run. Existing order lookup also returned
-HTTP 200 while Inventory was stopped. The timeout and malformed-response checks
-use mocked HTTP responses; the stopped-process failure above uses real services.
-
-### Scope and limitations
-
-Stock queries do not reserve or decrement quantities. Concurrent or repeated
-orders may therefore exceed stock; this lab demonstrates availability checking,
-not safe stock allocation. A production extension would add an atomic Inventory
-reservation command. Orders and stock are in memory; restarting Order loses its
-records. There is no payment, authentication, idempotency, persistence, or actual
-notification delivery. Flask's development server is sufficient for this lab.
+## Why are clear service boundaries and data ownership important?
+Clear service boundaries define what each service is responsible for. Data ownership defines which service has authority to read and change a particular kind of data. Together, they reduce coupling between modules/components and prevent conflicting decisions. Module/component isolation makes development and debugging much easier.
