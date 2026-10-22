@@ -1,0 +1,5 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13
+    ports:
+      - '5672:5672'

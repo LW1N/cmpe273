@@ -1,0 +1,9 @@
+18:22:21 worker-B waiting for messages on queue=orders
+18:22:23 worker-B received event_id=a3183cdf-7489-4ca7-9eef-a47bb750442e order_id=order-2 redelivered=False
+18:22:23 worker-B processing order_id=order-2 item_id=sku-123 quantity=5
+18:22:24 worker-B processed order_id=order-2
+18:22:24 worker-B ACK sent event_id=a3183cdf-7489-4ca7-9eef-a47bb750442e
+18:22:24 worker-B received event_id=094bd85a-da3a-401e-9a52-7e84d052b016 order_id=order-1 redelivered=True
+18:22:24 worker-B processing order_id=order-1 item_id=sku-123 quantity=4
+18:22:25 worker-B processed order_id=order-1
+18:22:25 worker-B ACK sent event_id=094bd85a-da3a-401e-9a52-7e84d052b016

@@ -1,0 +1,6 @@
+18:22:12 producer published event_id=188e1cfa-5398-4f09-9c77-5634e8bb30aa order_id=order-1 item_id=sku-456 quantity=4
+18:22:12 producer published event_id=c883cc49-283d-472a-94b0-f4afb8da533b order_id=order-2 item_id=sku-789 quantity=2
+18:22:12 producer published event_id=4f754a79-d187-40a0-971a-1a3f956b5eb4 order_id=order-3 item_id=sku-789 quantity=4
+18:22:12 producer published event_id=7b9d8328-1f75-4674-9ff1-c6f91cf3f960 order_id=order-4 item_id=sku-123 quantity=5
+18:22:12 producer published event_id=f135d554-cee0-47f2-8d81-41fda8946bb7 order_id=order-5 item_id=sku-456 quantity=3
+18:22:12 producer published event_id=ace584c0-f44f-4659-94ec-830c547e1221 order_id=order-6 item_id=sku-789 quantity=2

@@ -1,0 +1,13 @@
+18:22:10 worker-A waiting for messages on queue=orders
+18:22:12 worker-A received event_id=c883cc49-283d-472a-94b0-f4afb8da533b order_id=order-2 redelivered=False
+18:22:12 worker-A processing order_id=order-2 item_id=sku-789 quantity=2
+18:22:13 worker-A processed order_id=order-2
+18:22:13 worker-A ACK sent event_id=c883cc49-283d-472a-94b0-f4afb8da533b
+18:22:13 worker-A received event_id=4f754a79-d187-40a0-971a-1a3f956b5eb4 order_id=order-3 redelivered=False
+18:22:14 worker-A processing order_id=order-3 item_id=sku-789 quantity=4
+18:22:15 worker-A processed order_id=order-3
+18:22:15 worker-A ACK sent event_id=4f754a79-d187-40a0-971a-1a3f956b5eb4
+18:22:15 worker-A received event_id=f135d554-cee0-47f2-8d81-41fda8946bb7 order_id=order-5 redelivered=False
+18:22:16 worker-A processing order_id=order-5 item_id=sku-456 quantity=3
+18:22:17 worker-A processed order_id=order-5
+18:22:17 worker-A ACK sent event_id=f135d554-cee0-47f2-8d81-41fda8946bb7

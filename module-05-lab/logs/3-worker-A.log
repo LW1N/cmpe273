@@ -1,0 +1,8 @@
+18:22:28 worker-A waiting for messages on queue=orders
+18:22:30 worker-A received event_id=eb862d5e-d112-4ebf-8c32-50e0f8b28eba order_id=order-1 redelivered=False
+18:22:30 worker-A processing order_id=order-1 item_id=sku-123 quantity=3
+18:22:31 worker-A processed order_id=order-1
+18:22:31 worker-A ACK sent event_id=eb862d5e-d112-4ebf-8c32-50e0f8b28eba
+18:22:31 worker-A received event_id=ea29f44a-c855-48f3-8410-d054206becc4 order_id=order-2 redelivered=False
+18:22:32 worker-A duplicate detected event_id=ea29f44a-c855-48f3-8410-d054206becc4 order_id=order-2; skipping business action
+18:22:32 worker-A ACK sent event_id=ea29f44a-c855-48f3-8410-d054206becc4
