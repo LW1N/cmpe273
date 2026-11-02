@@ -1,0 +1,40 @@
+$ kubectl get pods -o wide
+NAME                        READY   STATUS    RESTARTS   AGE   IP           NODE                      NOMINATED NODE   READINESS GATES
+client-554c6966f5-stk25     1/1     Running   0          60s   10.244.0.4   module-06-control-plane   <none>           <none>
+inventory-bf696b8ff-8w99l   1/1     Running   0          60s   10.244.0.7   module-06-control-plane   <none>           <none>
+inventory-bf696b8ff-t6jr6   1/1     Running   0          60s   10.244.0.6   module-06-control-plane   <none>           <none>
+
+$ kubectl get svc inventory
+NAME        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+inventory   ClusterIP   10.96.137.103   <none>        80/TCP    60s
+
+$ kubectl get endpointslices -l kubernetes.io/service-name=inventory -o custom-columns=POD:.endpoints[*].targetRef.name,IP:.endpoints[*].addresses[0],READY:.endpoints[*].conditions.ready
+POD                                                   IP                      READY
+inventory-bf696b8ff-t6jr6,inventory-bf696b8ff-8w99l   10.244.0.6,10.244.0.7   true,true
+
+$ kubectl exec deploy/client -- curl -s http://inventory/inventory
+{"pod": "inventory-bf696b8ff-8w99l", "stock": {"sku-123": 42, "sku-456": 7}}
+$ kubectl logs deploy/client --tail=10
+04:57:34 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:35 {"pod": "inventory-bf696b8ff-8w99l", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:36 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:37 {"pod": "inventory-bf696b8ff-8w99l", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:38 {"pod": "inventory-bf696b8ff-8w99l", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:39 {"pod": "inventory-bf696b8ff-8w99l", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:40 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:41 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:42 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:43 {"pod": "inventory-bf696b8ff-8w99l", "stock": {"sku-123": 42, "sku-456": 7}}
+
+$ kubectl logs deploy/client --tail=20 | grep -o '"pod": "[^"]*"' | sort | uniq -c
+  10 "pod": "inventory-bf696b8ff-8w99l"
+  10 "pod": "inventory-bf696b8ff-t6jr6"
+
+$ kubectl logs pod/inventory-bf696b8ff-8w99l --tail=2
+[inventory-bf696b8ff-8w99l] "GET /inventory HTTP/1.1" 200 -
+[inventory-bf696b8ff-8w99l] "GET /inventory HTTP/1.1" 200 -
+
+$ kubectl logs pod/inventory-bf696b8ff-t6jr6 --tail=2
+[inventory-bf696b8ff-t6jr6] "GET /inventory HTTP/1.1" 200 -
+[inventory-bf696b8ff-t6jr6] "GET /inventory HTTP/1.1" 200 -
+

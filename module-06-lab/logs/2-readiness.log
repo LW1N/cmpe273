@@ -1,0 +1,56 @@
+$ kubectl exec inventory-bf696b8ff-8w99l -- touch /tmp/unready
+
+# ...waited 6s
+
+$ kubectl get pods -l app=inventory
+NAME                        READY   STATUS    RESTARTS   AGE
+inventory-bf696b8ff-8w99l   0/1     Running   0          67s
+inventory-bf696b8ff-t6jr6   1/1     Running   0          67s
+
+$ kubectl get endpointslices -l kubernetes.io/service-name=inventory -o custom-columns=POD:.endpoints[*].targetRef.name,IP:.endpoints[*].addresses[0],READY:.endpoints[*].conditions.ready
+POD                                                   IP                      READY
+inventory-bf696b8ff-t6jr6,inventory-bf696b8ff-8w99l   10.244.0.6,10.244.0.7   true,false
+
+$ kubectl get events --field-selector involvedObject.name=inventory-bf696b8ff-8w99l,reason=Unhealthy | grep -e LAST -e 503
+LAST SEEN   TYPE      REASON      OBJECT                          MESSAGE
+2s          Warning   Unhealthy   pod/inventory-bf696b8ff-8w99l   Readiness probe failed: HTTP probe failed with statuscode: 503
+
+# ...waited 8s
+
+$ kubectl logs deploy/client --since=8s
+04:57:51 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:52 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:53 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:54 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:55 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:56 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:57 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:57:58 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+
+$ kubectl exec inventory-bf696b8ff-8w99l -- rm /tmp/unready
+
+# ...waited 4s
+
+$ kubectl get pods -l app=inventory
+NAME                        READY   STATUS    RESTARTS   AGE
+inventory-bf696b8ff-8w99l   1/1     Running   0          80s
+inventory-bf696b8ff-t6jr6   1/1     Running   0          80s
+
+$ kubectl get endpointslices -l kubernetes.io/service-name=inventory -o custom-columns=POD:.endpoints[*].targetRef.name,IP:.endpoints[*].addresses[0],READY:.endpoints[*].conditions.ready
+POD                                                   IP                      READY
+inventory-bf696b8ff-t6jr6,inventory-bf696b8ff-8w99l   10.244.0.6,10.244.0.7   true,true
+
+# ...waited 10s
+
+$ kubectl logs deploy/client --since=10s
+04:58:04 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:58:05 {"pod": "inventory-bf696b8ff-8w99l", "stock": {"sku-123": 42, "sku-456": 7}}
+04:58:06 {"pod": "inventory-bf696b8ff-8w99l", "stock": {"sku-123": 42, "sku-456": 7}}
+04:58:07 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:58:08 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:58:09 {"pod": "inventory-bf696b8ff-8w99l", "stock": {"sku-123": 42, "sku-456": 7}}
+04:58:10 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:58:11 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:58:12 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+04:58:13 {"pod": "inventory-bf696b8ff-t6jr6", "stock": {"sku-123": 42, "sku-456": 7}}
+
