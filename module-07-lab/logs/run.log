@@ -1,0 +1,30 @@
+21:51:51 === Test 1: versioned ordering and duplicates (deliver v2, v1, v2 again) ===
+21:51:51 received order_id=order-1 version=2 status=PAID
+21:51:51 out of order order_id=order-1 version=2 buffered as pending; waiting for version(s) [1]
+21:51:51 received order_id=order-1 version=1 status=CREATED
+21:51:51 applied order_id=order-1 version=1 status None -> CREATED
+21:51:51 applied order_id=order-1 version=2 status CREATED -> PAID
+21:51:51 received order_id=order-1 version=2 status=PAID
+21:51:51 duplicate order_id=order-1 version=2; ignoring (current version=2)
+21:51:51 state order_id=order-1 version=2 status=PAID pending=[] missing=[]
+21:51:51 === Test 2: missing event (deliver v1, then v3 while v2 never arrives) ===
+21:51:51 received order_id=order-2 version=1 status=CREATED
+21:51:51 applied order_id=order-2 version=1 status None -> CREATED
+21:51:51 received order_id=order-2 version=3 status=SHIPPED
+21:51:51 out of order order_id=order-2 version=3 buffered as pending; waiting for version(s) [2]
+21:51:51 state order_id=order-2 version=1 status=CREATED pending=[3] missing=[2]
+21:51:51 === Test 3: stale worker rejected by fencing token ===
+21:51:51 received order_id=order-3 version=1 status=CREATED
+21:51:51 applied order_id=order-3 version=1 status None -> CREATED
+21:51:51 lock granted to worker-A on order_id=order-3 token=1
+21:51:51 worker-A pauses (e.g. GC pause) and its lease expires before it writes
+21:51:51 lock granted to worker-B on order_id=order-3 token=2
+21:51:51 accepted worker-B token=2 order_id=order-3
+21:51:51 received order_id=order-3 version=2 status=PAID
+21:51:51 applied order_id=order-3 version=2 status CREATED -> PAID
+21:51:51 worker-A resumes, still believing it holds the lock
+21:51:51 REJECTED worker-A token=1 order_id=order-3 version=3: stale token (highest seen=2)
+21:51:51 accepted worker-B token=2 order_id=order-3
+21:51:51 received order_id=order-3 version=3 status=SHIPPED
+21:51:51 applied order_id=order-3 version=3 status PAID -> SHIPPED
+21:51:51 state order_id=order-3 version=3 status=SHIPPED pending=[] missing=[]
