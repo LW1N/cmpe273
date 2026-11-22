@@ -1,0 +1,24 @@
+ * Serving Flask app 'payment'
+ * Debug mode: off
+14:20:58.012 INFO trace_id=6503cfd630a4463c97b2bdc7af8bee9c event=started order_id=order-1 amount=25.0 delay_ms=0
+14:20:58.012 INFO trace_id=6503cfd630a4463c97b2bdc7af8bee9c event=finished status=200 latency_ms=0.2
+ * Serving Flask app 'payment'
+ * Debug mode: off
+14:20:59.557 INFO trace_id=5288b1e4a3e4453d86dd82a89c1e4bde event=started order_id=order-2 amount=25.0 delay_ms=2000
+14:21:00.580 INFO trace_id=9f495fbe785e4ba3a6c22440a458a5a3 event=started order_id=order-3 amount=25.0 delay_ms=2000
+14:21:01.562 INFO trace_id=5288b1e4a3e4453d86dd82a89c1e4bde event=finished status=200 latency_ms=2005.2
+14:21:01.607 INFO trace_id=7d2c730d29254d7590cfb6fbb334ee3e event=started order_id=order-4 amount=25.0 delay_ms=2000
+14:21:02.585 INFO trace_id=9f495fbe785e4ba3a6c22440a458a5a3 event=finished status=200 latency_ms=2005.1
+14:21:03.613 INFO trace_id=7d2c730d29254d7590cfb6fbb334ee3e event=finished status=200 latency_ms=2005.1
+ * Serving Flask app 'payment'
+ * Debug mode: off
+14:21:06.179 INFO trace_id=241b38756a164972b56b4018bee22830 event=started order_id=order-5 amount=25.0 delay_ms=0
+14:21:06.179 INFO trace_id=241b38756a164972b56b4018bee22830 event=finished status=200 latency_ms=0.3
+14:21:06.194 INFO trace_id=8b078d15a057436cbc70a328cf6bb733 event=started order_id=order-6 amount=25.0 delay_ms=0
+14:21:06.194 INFO trace_id=8b078d15a057436cbc70a328cf6bb733 event=finished status=200 latency_ms=0.1
+14:21:06.204 INFO trace_id=e968c2154e54468999481851c55d98e2 event=started order_id=order-7 amount=25.0 delay_ms=0
+14:21:06.204 INFO trace_id=e968c2154e54468999481851c55d98e2 event=finished status=200 latency_ms=0.0
+14:21:06.214 INFO trace_id=7124bc93fa014b9d83f9f28aeb6a5e52 event=started order_id=order-8 amount=25.0 delay_ms=0
+14:21:06.214 INFO trace_id=7124bc93fa014b9d83f9f28aeb6a5e52 event=finished status=200 latency_ms=0.0
+14:21:06.222 INFO trace_id=96cc45e071504f33ac6dc37930bb3a42 event=started order_id=order-9 amount=25.0 delay_ms=0
+14:21:06.223 INFO trace_id=96cc45e071504f33ac6dc37930bb3a42 event=finished status=200 latency_ms=0.0
