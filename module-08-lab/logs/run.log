@@ -1,0 +1,31 @@
+14:08:57.694 === Test 1: replication (write stock=10 to primary) ===
+14:08:57.694 client write stock=10 to primary
+14:08:57.694 primary applied stock 0 -> 10
+14:08:57.694 primary queued stock=10 for replication
+14:08:57.694 client read primary -> stock=10
+14:08:57.694 client read secondary -> stock=0
+14:08:57.899 client read secondary -> stock=0
+14:08:58.104 client read secondary -> stock=0
+14:08:58.199 replicating stock=10 to secondary
+14:08:58.199 secondary applied stock 0 -> 10
+14:08:58.310 client read secondary -> stock=10
+14:08:58.310 CONVERGED primary=10 secondary=10
+14:08:58.310 === Test 2: stale read (pause replication, write stock=9) ===
+14:08:58.310 replication to secondary PAUSED
+14:08:58.310 client write stock=9 to primary
+14:08:58.310 primary applied stock 10 -> 9
+14:08:58.310 primary queued stock=9 for replication
+14:08:58.311 waiting 1.5s, longer than the normal replication lag
+14:08:59.815 client read primary -> stock=9
+14:08:59.816 client read secondary -> stock=10
+14:08:59.816 STALE READ: primary=9 but secondary=10
+14:08:59.816 === Test 3: recovery and convergence (resume replication) ===
+14:08:59.816 replication to secondary RESUMED
+14:08:59.816 client read primary -> stock=9
+14:08:59.816 client read secondary -> stock=10
+14:09:00.021 client read secondary -> stock=10
+14:09:00.222 client read secondary -> stock=10
+14:09:00.321 replicating stock=9 to secondary
+14:09:00.321 secondary applied stock 10 -> 9
+14:09:00.428 client read secondary -> stock=9
+14:09:00.428 CONVERGED primary=9 secondary=9
